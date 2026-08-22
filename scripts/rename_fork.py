@@ -90,12 +90,16 @@ def _iter_files(include_docs: bool):
 
 def _replacements(args: argparse.Namespace) -> list[tuple[str, str]]:
     env_prefix = args.env_prefix.rstrip("_").upper() + "_"
-    # Order matters: replace the longer, more specific strings first. In this repo the CLI
-    # name, the distribution name and the resource stem coincide (``onprem-dlp``), so we
-    # de-duplicate identical old tokens (keeping the first) to keep the plan honest and
-    # avoid a later, divergent new value silently overriding an earlier identical one.
+    # Three constants are the same token here, so replacing any of them bare consumes every
+    # occurrence and leaves the others doing nothing. The distribution and the console script
+    # each have a declaration to anchor on; anchoring them is what keeps --dist, --cli and
+    # --resource independently meaningful.
     raw = [
-        (_OLD_DIST, args.dist or args.resource),
+        (f'name = "{_OLD_DIST}"', f'name = "{args.dist or args.resource}"'),
+        (
+            f'{_OLD_CLI} = "{_OLD_PACKAGE}.cli.main:main"',
+            f'{args.cli} = "{args.package}.cli.main:main"',
+        ),
         (_OLD_PACKAGE, args.package),
         (_OLD_RESOURCE, args.resource),
         (_OLD_CLI, args.cli),
