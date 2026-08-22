@@ -1,0 +1,126 @@
+{{- if and .Values.api.acceptUnauthenticatedExposure (not .Values.networkPolicy.enabled) }}
+{{- fail "api.acceptUnauthenticatedExposure=true requires networkPolicy.enabled=true: the DLP API authenticates nobody, so the default-deny NetworkPolicy is the compensating boundary for binding it off loopback. Enable the policy, or set api.host to 127.0.0.1 and drop the acceptance (the Service and the kubelet probes will not reach the pod)." }}
+{{- end }}
+{{- if and .Values.api.corsOrigins (has "*" .Values.api.corsOrigins) }}
+{{- fail "api.corsOrigins names '*': the DLP API authenticates nobody, so a wildcard origin would let any page in a browser post personal data to it and read the response. List the exact origins instead." }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "onprem-dlp.fullname" . }}
+  labels:
+    {{- include "onprem-dlp.labels" . | nindent 4 }}
+  annotations:
+    grc.openai.com/audit-retention-days: {{ .Values.audit.retentionDays | quote }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  {{- if and .Values.audit.enabled .Values.audit.persistence.enabled }}
+  strategy:
+    type: Recreate
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "onprem-dlp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "onprem-dlp.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        grc.openai.com/audit-retention-days: {{ .Values.audit.retentionDays | quote }}
+    spec:
+      serviceAccountName: {{ include "onprem-dlp.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: onprem-dlp
+          image: {{ include "onprem-dlp.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8484
+              protocol: TCP
+          env:
+            - name: ONPREM_DLP_PROFILE
+              value: {{ .Values.profile | quote }}
+            - name: ONPREM_DLP_CONFIG
+              value: /app/config/settings.yaml
+            # The bind is declared here, not defaulted in the image: the guard in
+            # onprem_dlp/netguard.py refuses a non-loopback bind of the unauthenticated API
+            # unless the acceptance below is present, and the render fails without the
+            # NetworkPolicy that compensates for it.
+            - name: ONPREM_DLP_API_HOST
+              value: {{ .Values.api.host | quote }}
+            - name: ONPREM_DLP_API_PORT
+              value: "8484"
+            {{- if .Values.api.acceptUnauthenticatedExposure }}
+            - name: ONPREM_DLP_ALLOW_UNAUTHENTICATED_EXPOSURE
+              value: "1"
+            {{- end }}
+            {{- with .Values.api.corsOrigins }}
+            - name: ONPREM_DLP_API_CORS_ORIGINS
+              value: {{ join "," . | quote }}
+            {{- end }}
+            - name: ONPREM_DLP_AUDIT_RETENTION_DAYS
+              value: {{ .Values.audit.retentionDays | quote }}
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+            - name: ONPREM_DLP_REDACTION_HASH_SALT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "secret.existingSecret is required" .Values.secret.existingSecret }}
+                  key: {{ required "secret.hashSaltKey is required" .Values.secret.hashSaltKey }}
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+            {{- if .Values.audit.enabled }}
+            - name: audit
+              mountPath: {{ dir .Values.audit.path }}
+            {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "onprem-dlp.fullname" . }}-config
+        - name: tmp
+          emptyDir:
+            sizeLimit: 128Mi
+        {{- if .Values.audit.enabled }}
+        - name: audit
+          {{- if .Values.audit.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ default (printf "%s-audit" (include "onprem-dlp.fullname" .)) .Values.audit.persistence.existingClaim }}
+          {{- else }}
+          emptyDir:
+            sizeLimit: 1Gi
+          {{- end }}
+        {{- end }}
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}

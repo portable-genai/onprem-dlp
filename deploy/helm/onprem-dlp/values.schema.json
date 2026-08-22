@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["image", "profile", "secret", "audit", "api", "networkPolicy"],
+  "properties": {
+    "replicaCount": {"type": "integer", "minimum": 1},
+    "profile": {
+      "type": "string",
+      "enum": ["local"]
+    },
+    "api": {
+      "type": "object",
+      "required": ["host", "acceptUnauthenticatedExposure"],
+      "properties": {
+        "host": {"type": "string", "minLength": 1},
+        "acceptUnauthenticatedExposure": {"type": "boolean"},
+        "corsOrigins": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1, "not": {"const": "*"}}
+        }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {"type": "boolean"}
+      }
+    },
+    "image": {
+      "type": "object",
+      "required": ["repository", "tag"],
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "tag": {"type": "string", "minLength": 1},
+        "digest": {"type": "string"},
+        "pullPolicy": {"enum": ["Always", "IfNotPresent", "Never"]}
+      }
+    },
+    "secret": {
+      "type": "object",
+      "required": ["existingSecret", "hashSaltKey"],
+      "properties": {
+        "existingSecret": {"type": "string", "minLength": 1},
+        "hashSaltKey": {"type": "string", "minLength": 1}
+      }
+    },
+    "audit": {
+      "type": "object",
+      "required": ["retentionDays"],
+      "properties": {
+        "retentionDays": {"type": "integer", "minimum": 1, "maximum": 3650}
+      }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "customer_id": "PII_QUASI",
+  "full_name": "PII_DIRECT",
+  "email": "PII_DIRECT",
+  "phone": "PII_DIRECT",
+  "nric": "PII_DIRECT",
+  "date_of_birth": "PII_QUASI",
+  "gender": "PII_QUASI",
+  "postal_code": "PII_QUASI",
+  "nationality": "PII_QUASI",
+  "salary_sgd": "SENSITIVE",
+  "health_condition": "SENSITIVE",
+  "account_balance": "NON_PII",
+  "product_code": "NON_PII",
+  "branch_code": "NON_PII"
+}

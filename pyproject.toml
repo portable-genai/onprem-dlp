@@ -1,0 +1,65 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "onprem-dlp"
+version = "0.0.1"
+description = "Rsk6 on-prem DLP gate: detect and redact PII in text/images and classify database columns PII vs non-PII before any data leaves for the cloud. Pure-stdlib deterministic core; optional CPU-only Gemma/Presidio/Tesseract adapters."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Ashish Awasthi" }]
+keywords = [
+  "dlp", "pii", "redaction", "data-governance", "on-prem", "gemma",
+  "presidio", "ocr", "privacy", "pdpa", "gdpr", "bfsi",
+]
+
+# ZERO mandatory third-party dependencies: the domain core, the local profile, the
+# CLI, CSV/SQLite sampling and the Ollama-Gemma adapter are stdlib-only, so the gate
+# installs and runs on an air-gapped host with nothing but Python.
+dependencies = []
+
+[project.optional-dependencies]
+yaml = ["pyyaml>=6.0"]                       # config/settings.yaml (JSON config works without)
+api = ["fastapi>=0.111", "uvicorn>=0.30", "pyyaml>=6.0"]
+ner = ["presidio-analyzer>=2.2", "spacy>=3.7"]
+ocr = ["pytesseract>=0.3.10", "Pillow>=10.0"]
+llamacpp = ["llama-cpp-python>=0.2.90"]
+postgres = ["psycopg[binary]>=3.1"]
+mysql = ["mysql-connector-python>=9.0"]
+bigquery = ["google-cloud-bigquery>=3.25"]
+dev = [
+  "pip-audit==2.10.1",
+  "pytest>=8.2",
+  "pytest-cov>=5.0",
+  "ruff==0.15.18",
+  "pyyaml>=6.0",
+]
+all = [
+  "onprem-dlp[yaml,api,ner,ocr,postgres,mysql,bigquery]",
+]
+
+[project.scripts]
+onprem-dlp = "onprem_dlp.cli.main:main"
+# Guarded REST entry point: resolves the bind through onprem_dlp.netguard rather than
+# taking a --host from a container argument no guard can see.
+onprem-dlp-serve = "onprem_dlp.api.serve:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/onprem_dlp"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# "." so `tests.contract...` imports resolve under a bare `pytest` too, not only under the
+# `python -m pytest` the Makefile runs, which puts the working directory on sys.path for free.
+pythonpath = ["src", "."]
+addopts = "-q"

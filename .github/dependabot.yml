@@ -1,0 +1,17 @@
+# Automated dependency updates for the ecosystems this repo pins. Pairs with the committed
+# lockfiles (requirements-*.lock) and the digest-pinned base image (Dockerfile).
+# CI is fully offline; Dependabot PRs must pass the exact same locked gate.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: daily
+    groups:
+      python-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly

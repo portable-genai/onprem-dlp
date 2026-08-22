@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+audit/
+*.gguf
+.env
+.env.secrets
+
+# Local editor and OS noise.
+.DS_Store

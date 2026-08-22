@@ -1,0 +1,12 @@
+1. Keep .env and .env.secrets outside version control.
+2. Create {{ .Values.secret.existingSecret }} from the approved secret source.
+3. Verify the service after installation:
+   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "onprem-dlp.fullname" . }} 8484:{{ .Values.service.port }}
+   curl -fsS http://127.0.0.1:8484/healthz
+
+The chart records an audit-retention target of {{ .Values.audit.retentionDays }} days.
+Configure the same lifecycle policy on the PVC backend and downstream SIEM; the
+application intentionally does not rewrite its append-only audit evidence.
+
+This chart supports profile=local only. Model profiles require a separately reviewed
+image, model mount/endpoint, network policy, and engine-readiness probe.

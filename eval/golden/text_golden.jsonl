@@ -1,0 +1,22 @@
+{"id": "sg-nric-context", "text": "Customer verification done. NRIC S1234567D matches the registration.", "expected": [{"type": "SG_NRIC", "text": "S1234567D"}]}
+{"id": "sg-nric-bare", "text": "Ref S8712345F attached to the case notes.", "expected": [{"type": "SG_NRIC", "text": "S8712345F"}]}
+{"id": "nric-bad-checksum", "text": "Ref S1234567A attached to the case notes.", "expected": []}
+{"id": "email-simple", "text": "Please loop in priya.sharma@corp.example.sg on the thread.", "expected": [{"type": "EMAIL_ADDRESS", "text": "priya.sharma@corp.example.sg"}]}
+{"id": "credit-card-valid", "text": "Charge the visa card 4111 1111 1111 1111 for the renewal.", "expected": [{"type": "CREDIT_CARD", "text": "4111 1111 1111 1111"}]}
+{"id": "credit-card-luhn-fail", "text": "PO number 4111 1111 1111 1112 for the renewal.", "expected": []}
+{"id": "iban", "text": "Settle to IBAN DE89 3704 0044 0532 0130 00 by Friday.", "expected": [{"type": "IBAN", "text": "DE89 3704 0044 0532 0130 00"}]}
+{"id": "phone-intl", "text": "Reach the RM on +65 9123 4567 after lunch.", "expected": [{"type": "PHONE_NUMBER", "text": "+65 9123 4567"}]}
+{"id": "phone-local-with-context", "text": "Call our office phone 6234 5678 for enquiries.", "expected": [{"type": "PHONE_NUMBER", "text": "6234 5678"}]}
+{"id": "invoice-number-not-phone", "text": "Invoice total came to 123 456 782 dollars this quarter.", "expected": []}
+{"id": "hkid", "text": "Director identity: HKID A123456(3) on record.", "expected": [{"type": "HK_HKID", "text": "A123456(3)"}]}
+{"id": "jp-my-number", "text": "For the tax form her My Number is 1234 5678 9018.", "expected": [{"type": "JP_MY_NUMBER", "text": "1234 5678 9018"}]}
+{"id": "au-tfn-context", "text": "The employee's tax file number is 123 456 782.", "expected": [{"type": "AU_TFN", "text": "123 456 782"}]}
+{"id": "au-abn", "text": "Bill the entity under ABN 51 824 753 556 as usual.", "expected": [{"type": "AU_ABN", "text": "51 824 753 556"}]}
+{"id": "au-medicare", "text": "Medicare card 2123 45670 1 was sighted at onboarding.", "expected": [{"type": "AU_MEDICARE", "text": "2123 45670 1"}]}
+{"id": "us-ssn", "text": "Their SSN 536-90-4399 is on the W-9.", "expected": [{"type": "US_SSN", "text": "536-90-4399"}]}
+{"id": "passport-context", "text": "Please courier my passport E1234567 with the visa pack.", "expected": [{"type": "PASSPORT", "text": "E1234567"}]}
+{"id": "passport-no-context", "text": "Shipment code E1234567 cleared the port today.", "expected": []}
+{"id": "dob-context", "text": "The applicant was born on 12/03/1985 in Penang.", "expected": [{"type": "DATE_OF_BIRTH", "text": "12/03/1985"}]}
+{"id": "plain-date-no-dob", "text": "The review meeting moved to 12/03/2026 at 10am.", "expected": []}
+{"id": "ip-address", "text": "The export job runs from server 10.20.30.40 nightly.", "expected": [{"type": "IP_ADDRESS", "text": "10.20.30.40"}]}
+{"id": "clean-business-text", "text": "Quarterly revenue grew 12% and churn fell to 1.8% across all segments.", "expected": []}

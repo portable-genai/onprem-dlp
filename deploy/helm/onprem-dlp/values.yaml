@@ -1,0 +1,94 @@
+replicaCount: 1
+
+image:
+  repository: REPLACE_WITH_REGISTRY/onprem-dlp
+  tag: REPLACE_WITH_IMMUTABLE_TAG
+  digest: ""
+  pullPolicy: IfNotPresent
+
+# The current image/chart contract supports only the SDK-free local profile.
+# Model profiles need separately approved images, model mounts/endpoints, egress,
+# and engine-level readiness probes and are intentionally rejected by the schema.
+profile: local
+
+serviceAccount:
+  create: true
+  name: ""
+
+service:
+  type: ClusterIP
+  port: 8484
+
+api:
+  # The REST surface authenticates nobody: its four POST routes take the raw personal data a
+  # caller was about to send to the cloud. The image therefore binds loopback unless BOTH
+  # values below are set, and a pod must bind its pod IP for the Service and the kubelet
+  # probes to reach it. So this chart accepts the exposure EXPLICITLY, and the acceptance is
+  # rejected at render time unless networkPolicy.enabled is the compensating boundary.
+  host: "0.0.0.0"
+  acceptUnauthenticatedExposure: true
+  # Cross-origin allowlist for browser callers. Empty means no origin is trusted, which is the
+  # right answer for a service with no UI of its own. A "*" entry is refused, never stripped.
+  corsOrigins: []
+
+config:
+  detectionMinConfidence: 0.35
+  policyMinConfidence: 0.5
+  classifierPiiThreshold: 0.6
+  classifierReviewThreshold: 0.3
+  sampleLimit: 500
+
+secret:
+  # Create this from .env.secrets; do not place secret values in values files.
+  existingSecret: onprem-dlp-secrets
+  hashSaltKey: ONPREM_DLP_REDACTION_HASH_SALT
+
+audit:
+  enabled: true
+  path: /var/log/onprem-dlp/audit.jsonl
+  # Metadata/config default. Enforce deletion/archival in the PVC backend or SIEM;
+  # the application writer remains append-only and never rewrites evidence.
+  retentionDays: 180
+  persistence:
+    enabled: true
+    existingClaim: ""
+    storageClass: ""
+    accessModes: [ReadWriteOnce]
+    size: 10Gi
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "2"
+    memory: 2Gi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+
+networkPolicy:
+  enabled: true
+  # Secure local-profile default: API ingress only from this namespace; no egress.
+  # Add explicit egress rules when enabling Ollama or remote database samplers.
+  additionalIngress: []
+  additionalEgress: []
+
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 0
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

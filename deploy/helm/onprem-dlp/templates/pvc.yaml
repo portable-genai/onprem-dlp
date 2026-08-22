@@ -1,0 +1,19 @@
+{{- if and .Values.audit.enabled .Values.audit.persistence.enabled (not .Values.audit.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "onprem-dlp.fullname" . }}-audit
+  labels:
+    {{- include "onprem-dlp.labels" . | nindent 4 }}
+  annotations:
+    grc.openai.com/audit-retention-days: {{ .Values.audit.retentionDays | quote }}
+spec:
+  accessModes:
+    {{- toYaml .Values.audit.persistence.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.audit.persistence.size }}
+  {{- with .Values.audit.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+{{- end }}

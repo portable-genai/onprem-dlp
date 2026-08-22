@@ -1,0 +1,19 @@
+{"id": "ja-my-number-kanji", "text": "本人確認済みです。個人番号：123456789018 を登録しました。", "expected": [{"type": "JP_MY_NUMBER", "text": "123456789018"}]}
+{"id": "ja-my-number-katakana", "text": "マイナンバーは 1234 5678 9018 です。", "expected": [{"type": "JP_MY_NUMBER", "text": "1234 5678 9018"}]}
+{"id": "ja-my-number-bad-checksum", "text": "個人番号：123456789019 を確認してください。", "expected": []}
+{"id": "ja-email", "text": "連絡先メールは taro.yamada@example.invalid です。", "expected": [{"type": "EMAIL_ADDRESS", "text": "taro.yamada@example.invalid"}]}
+{"id": "ja-card", "text": "クレジットカード番号は 4111 1111 1111 1111 です。", "expected": [{"type": "CREDIT_CARD", "text": "4111 1111 1111 1111"}]}
+{"id": "ja-card-bad-checksum", "text": "注文番号は 4111 1111 1111 1112 です。", "expected": []}
+{"id": "ja-local-phone-context", "text": "携帯電話：090-1234-5678", "expected": [{"type": "PHONE_NUMBER", "text": "090-1234-5678"}]}
+{"id": "ja-local-number-no-context", "text": "受付番号：090-1234-5678", "expected": []}
+{"id": "ja-passport-context", "text": "パスポート番号：TR1234560", "expected": [{"type": "PASSPORT", "text": "TR1234560"}]}
+{"id": "ja-passport-no-context", "text": "出荷コード：TR1234560", "expected": []}
+{"id": "ja-date-of-birth", "text": "生年月日：1985-03-12", "expected": [{"type": "DATE_OF_BIRTH", "text": "1985-03-12"}]}
+{"id": "ja-date-of-birth-leap-day", "text": "生年月日：2000-02-29", "expected": [{"type": "DATE_OF_BIRTH", "text": "2000-02-29"}]}
+{"id": "ja-invalid-date-leap-day", "text": "生年月日：2023-02-29", "expected": []}
+{"id": "ja-invalid-date-month", "text": "生年月日：1985-13-12", "expected": []}
+{"id": "ja-ordinary-date", "text": "次回会議：2026-03-12", "expected": []}
+{"id": "ja-ip-address", "text": "接続元のIPアドレス：10.20.30.40", "expected": [{"type": "IP_ADDRESS", "text": "10.20.30.40"}]}
+{"id": "ja-invalid-ip", "text": "接続元のIPアドレス：999.20.30.40", "expected": []}
+{"id": "ja-iban", "text": "振込先IBAN：DE89 3704 0044 0532 0130 00", "expected": [{"type": "IBAN", "text": "DE89 3704 0044 0532 0130 00"}]}
+{"id": "ja-clean", "text": "四半期売上は前年同期比で12パーセント増加しました。", "expected": []}

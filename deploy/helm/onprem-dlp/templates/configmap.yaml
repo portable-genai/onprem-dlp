@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "onprem-dlp.fullname" . }}-config
+  labels:
+    {{- include "onprem-dlp.labels" . | nindent 4 }}
+data:
+  settings.yaml: |
+    profile: {{ .Values.profile }}
+    audit_log: {{ ternary .Values.audit.path "null" .Values.audit.enabled }}
+    audit_retention_days: {{ .Values.audit.retentionDays }}
+    detection:
+      min_confidence: {{ .Values.config.detectionMinConfidence }}
+    redaction:
+      default_strategy: tag
+      hash_salt: overridden-by-secret-environment
+      strategies:
+        CREDIT_CARD: mask
+        IBAN: mask
+    policy:
+      min_confidence: {{ .Values.config.policyMinConfidence }}
+      block_at_or_above: 1
+      block_entities:
+        [AU_MEDICARE, AU_TFN, CREDIT_CARD, HK_HKID, JP_MY_NUMBER, PASSPORT, SG_NRIC, US_SSN]
+      redact_entities:
+        [ADDRESS, AU_ABN, DATE_OF_BIRTH, EMAIL_ADDRESS, GENERIC_ID, IBAN, IP_ADDRESS, PERSON_NAME, PHONE_NUMBER]
+    classifier:
+      pii_threshold: {{ .Values.config.classifierPiiThreshold }}
+      review_threshold: {{ .Values.config.classifierReviewThreshold }}
+      sample_limit: {{ .Values.config.sampleLimit }}

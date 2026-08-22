@@ -1,0 +1,23 @@
+From: Wei Ming Tan <weiming.tan@example.com>
+To: support@examplebank.sg
+Subject: Update my card and contact details
+
+Hi team,
+
+I spoke to your contact centre yesterday from my mobile +65 9123 4567 but the
+change did not go through. My NRIC is S8712345F, and for verification my date of
+birth is 12/03/1985 (as per my passport E1234567).
+
+Please update the billing card on my account to my new Visa card
+4111 1111 1111 1111, and stop charging the old corporate account
+(IBAN DE89 3704 0044 0532 0130 00, ABN 51 824 753 556 for the invoice entity).
+
+My colleague in Tokyo also asked me to pass on her My Number 1234 5678 9018 for
+the tax residency form, and our Hong Kong director's HKID is A123456(3). For the
+Australian entity the TFN is 123 456 782 and the Medicare card reads 2123 45670 1.
+
+You can also reach me at home on +6562345678 or via our office server
+10.20.30.40 if email bounces.
+
+Thanks,
+Wei Ming

@@ -1,0 +1,64 @@
+# On-prem DLP gate — deployment settings.
+# Everything here overlays the defaults in onprem_dlp/config.py; delete a key to keep
+# the default. Select the adapter profile with `profile:` or ONPREM_DLP_PROFILE.
+
+profile: local            # local | gemma-ollama | gemma-llamacpp | full
+
+# Append-only JSONL audit trail of every scan and egress decision (null = off).
+audit_log: null           # e.g. /var/log/onprem-dlp/audit.jsonl
+# Lifecycle enforcement belongs to the mounted store/SIEM, not the append-only writer.
+audit_retention_days: 180
+
+detection:
+  min_confidence: 0.35    # findings below this floor are dropped at scan time
+  jurisdictions: [SG, HK, JP, AU, US]  # explicit packs; GLOBAL patterns are always included
+
+redaction:
+  default_strategy: tag   # tag | mask | hash | remove
+  hash_salt: change-me-per-deployment   # keeps HASH tokens stable but unlinkable across sites
+  strategies:             # per-entity overrides
+    CREDIT_CARD: mask
+    IBAN: mask
+
+policy:                   # deterministic egress gate
+  min_confidence: 0.5
+  block_at_or_above: 1    # this many block-listed findings force BLOCK (human release)
+  block_entities:
+    [AU_MEDICARE, AU_TFN, CREDIT_CARD, HK_HKID, JP_MY_NUMBER, PASSPORT, SG_NRIC, US_SSN]
+  redact_entities:
+    [ADDRESS, AU_ABN, DATE_OF_BIRTH, EMAIL_ADDRESS, GENERIC_ID, IBAN, IP_ADDRESS, PERSON_NAME, PHONE_NUMBER]
+
+classifier:               # structured-column engine
+  pii_threshold: 0.6
+  review_threshold: 0.3
+  sample_limit: 500
+
+profiles:
+  local:                  # stdlib only — regex + checksums; no models. Always works.
+    ner: {class: "onprem_dlp.adapters.local:NullNer"}
+    adjudicator: {class: "onprem_dlp.adapters.local:NullAdjudicator"}
+  gemma-ollama:           # + Google Gemma via a local Ollama daemon (CPU)
+    ner:
+      class: "onprem_dlp.adapters.gemma:OllamaGemmaClient"
+      kwargs: {base_url: "http://127.0.0.1:11434", model: "gemma3:1b"}
+    adjudicator:
+      class: "onprem_dlp.adapters.gemma:OllamaGemmaClient"
+      kwargs: {base_url: "http://127.0.0.1:11434", model: "gemma3:1b"}
+  gemma-llamacpp:         # + Gemma GGUF in-process (no daemon; air-gapped)
+    ner:
+      class: "onprem_dlp.adapters.gemma:LlamaCppGemmaClient"
+      kwargs: {model_path: "/models/gemma-3-1b-it-Q4_K_M.gguf"}
+    adjudicator:
+      class: "onprem_dlp.adapters.gemma:LlamaCppGemmaClient"
+      kwargs: {model_path: "/models/gemma-3-1b-it-Q4_K_M.gguf"}
+  full:                   # Presidio NER for names/addresses + Gemma adjudication
+    ner: {class: "onprem_dlp.adapters.ner:PresidioNer"}
+    adjudicator:
+      class: "onprem_dlp.adapters.gemma:OllamaGemmaClient"
+      kwargs: {base_url: "http://127.0.0.1:11434", model: "gemma3:1b"}
+
+ocr:                      # used by scan-image / redact-image
+  class: "onprem_dlp.adapters.ocr:TesseractOcr"
+  kwargs: {lang: eng}     # add e.g. eng+jpn for Japanese documents
+image_redactor:
+  class: "onprem_dlp.adapters.ocr:PillowImageRedactor"
