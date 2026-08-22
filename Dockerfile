@@ -1,5 +1,5 @@
 # CPU-only, on-prem image. No cloud SDKs, no GPUs, no external calls at runtime.
-FROM python:3.12-slim@sha256:423ed6ab25b1921a477529254bfeeabf5855151dc2c3141699a1bfc852199fbf
+FROM python:3.14-slim@sha256:ce40764625a4ff50df3548277632e7f96c4e77fe75fa848aae9885476e7df5a4
 
 # Tesseract enables the image pipeline; drop this line for a text/columns-only image.
 RUN apt-get update && apt-get install -y --no-install-recommends \
