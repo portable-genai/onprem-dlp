@@ -172,3 +172,10 @@ regress.
 **Ollama down:** gate keeps running deterministically (fail-soft); NER recall drops
 and ambiguous columns queue for humans. Restore the daemon; no restart of the gate
 needed.
+
+## Hosted CI
+
+Cloud Build runs this repository's `dependency-audit` and `offline-gate` jobs on every pull
+request and every push to `main`, from the reviewed job contract in the catalog's
+`ci/gcp/repository-policy.json`. The build only builds and tests: it holds no deploy authority
+and cannot reach this system's runtime.
