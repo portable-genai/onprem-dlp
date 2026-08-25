@@ -71,7 +71,7 @@ requests==2.34.2
     #   pip-audit
 rich==15.0.0
     # via pip-audit
-ruff==0.15.18
+ruff==0.16.3
     # via onprem-dlp (pyproject.toml)
 sortedcontainers==2.4.0
     # via cyclonedx-python-lib
