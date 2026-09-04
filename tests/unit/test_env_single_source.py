@@ -1,11 +1,11 @@
 """The environment has ONE reader, and no read may carry a permissive literal default.
 
-The standing gate for the absence-read-as-consent class, adapted from Hrz7's profile guard to
-the shape the class takes here. Every fail-open this repo carried was spelled either
+The standing gate for the absence-read-as-consent class, adapted from human-review-console's profile
+guard to the shape the class takes here. Every fail-open this repo carried was spelled either
 ``os.environ.get(name)`` followed by ``if value:`` or ``os.environ.get(name, <literal>)``: the
-two-state read that cannot tell "absent" from "set to nothing" and answers both with the
-default. That default was, variously, the public built-in redaction salt, a disabled audit
-trail, the weakest detection profile, and an empty database password.
+two-state read that cannot tell "absent" from "set to nothing" and answers both with the default.
+That default was, variously, the public built-in redaction salt, a disabled audit trail, the weakest
+detection profile, and an empty database password.
 
 ``netguard.read_env_setting`` now owns that decision in three states. A second reader, or a
 two-state read reappearing anywhere, brings the whole class back, so both are build failures.

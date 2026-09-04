@@ -8,7 +8,7 @@ This table is an implementation starting point, not legal advice. Each adopting 
 applicability, exact instrument/version references, validation of the selected jurisdiction packs,
 approval by privacy/legal/control owners, and retained evidence.
 
-| Regime / regulator | Control family to validate | Rsk6 evidence seam |
+| Regime / regulator | Control family to validate | `onprem-dlp` evidence seam |
 | --- | --- | --- |
 | Singapore PDPA / MAS | Data minimization, protection, outsourcing and technology risk | `SG` pack, deterministic BLOCK/REDACT policy, verified audit chain |
 | HK PDPO / HKMA | Personal-data protection and technology/outsourcing risk | `HK` pack plus adopter-owned policy and runbook evidence |
@@ -38,7 +38,7 @@ below states what it enforces and where the residual risk sits.
 - **Recall is not 100%.** Regex+checksum misses unformatted or novel identifiers;
   PERSON/ADDRESS recall requires the `full` or Gemma profiles; OCR misses low-quality
   scans. Treat the gate as risk reduction, not a guarantee; keep contractual and
-  cloud-side controls (e.g. Hrz1 gateway with Cloud DLP) layered behind it.
+  cloud-side controls (e.g. `agent-guardrail-gateway` with Cloud DLP) layered behind it.
 - **Gemma/Presidio models can be wrong.** That is why they are advisory and bounded;
   their failure mode is a missed *extra* finding, never a silent release of a
   checksum-validated identifier.

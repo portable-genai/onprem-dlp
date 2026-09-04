@@ -57,7 +57,7 @@ configuration. Regex, checksums, Gemma, Presidio, and Tesseract run **on-prem on
 the Helm local profile denies egress. PostgreSQL/MySQL/BigQuery column samplers are
 explicit opt-in connections to an adopter-authorized data source, so their location,
 TLS, and identity policy are adopter-owned. This repo is one of the systems that a
-residency validator (Rsk4) or an exit planner (Rsk5) reasons about.
+residency validator (the data-residency validator) or an exit planner (the exit-and-portability planner) reasons about.
 
 ### Which regulators does it map to, and can I add mine?
 

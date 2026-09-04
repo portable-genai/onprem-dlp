@@ -5,7 +5,7 @@ advisory, and where its responsibilities **stop** and a sibling catalog system t
 Cross-references: [`README.md`](../../README.md), [`DEMO.md`](../../DEMO.md),
 [`SPEC.md`](../../SPEC.md).
 
-### What does Rsk6 actually do?
+### What does `onprem-dlp` actually do?
 
 It is a preventive **DLP egress gate**: it detects, redacts, and decides on PII **before** any
 byte leaves the estate for a cloud LLM or API. It ships **two solutions behind one
@@ -53,12 +53,12 @@ This is one system in a catalog of composable GRC systems, and it is a deliberat
 **leaf control**. Being air-gapped with zero runtime egress, it **consumes nothing** at
 runtime; the table below is about where it sits, not what it calls:
 
-| Concern | Owned by (catalog id / repo) | Rsk6's relationship |
+| Concern | Owned by (catalog id / repo) | `onprem-dlp`'s relationship |
 |---|---|---|
-| In-cloud runtime guardrail: prompt-injection / jailbreak defence, cloud DLP | **Hrz1** `agent-guardrail-gateway` | Rsk6 is the on-prem gate that runs *before* egress; Hrz1 is the in-cloud control layered behind it |
-| Enterprise immutable WORM prompt/response audit | **Hrz5** `agent-observability` | Rsk6's local JSONL sink ships to it (or your SIEM) for durability and tamper-evidence |
-| Cloud document-diligence agents (CDD / SoW, and similar) | the document-vertical repositories | consume Rsk6 as the sovereign-DLP option behind their redaction port |
-| Residency validation / exit planning | **Rsk4** / **Rsk5** | Rsk6 is one of the systems those tools reason about; its residency is physical (on-prem) |
+| In-cloud runtime guardrail: prompt-injection / jailbreak defence, cloud DLP | `agent-guardrail-gateway` | `onprem-dlp` is the on-prem gate that runs *before* egress; `agent-guardrail-gateway` is the in-cloud control layered behind it |
+| Enterprise immutable WORM prompt/response audit | `agent-observability` | `onprem-dlp`'s local JSONL sink ships to it (or your SIEM) for durability and tamper-evidence |
+| Cloud document-diligence agents (CDD / SoW, and similar) | the document-vertical repositories | consume `onprem-dlp` as the sovereign-DLP option behind their redaction port |
+| Residency validation / exit planning | **the data-residency validator** / **the exit-and-portability planner** | `onprem-dlp` is one of the systems those tools reason about; its residency is physical (on-prem) |
 
 So the in-cloud guardrail, the enterprise audit system, and the eval platform are *adjacent*,
 not features of this repo, and this repo does not rebuild any of them.

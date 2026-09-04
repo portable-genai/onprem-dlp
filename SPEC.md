@@ -1,4 +1,4 @@
-# SPEC: on-prem DLP gate (Rsk6)
+# SPEC: on-prem DLP gate (`onprem-dlp`)
 
 Documentation authority is declared in [`docs/doc-authority.md`](docs/doc-authority.md).
 
