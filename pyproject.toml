@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "onprem-dlp"
 version = "0.0.1"
-description = "Rsk6 on-prem DLP gate: detect and redact PII in text/images and classify database columns PII vs non-PII before any data leaves for the cloud. Pure-stdlib deterministic core; optional CPU-only Gemma/Presidio/Tesseract adapters."
+description = "onprem-dlp: the on-prem DLP gate, detect and redact PII in text/images and classify database columns PII vs non-PII before any data leaves for the cloud. Pure-stdlib deterministic core; optional CPU-only Gemma/Presidio/Tesseract adapters."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }

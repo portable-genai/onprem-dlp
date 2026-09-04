@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Bounded portability proof for the on-prem-native pre-egress DLP gate.
 
-Rsk6 is deliberately not a GCP-hosted application. Its portability claim is that the same
+onprem-dlp is deliberately not a GCP-hosted application. Its portability claim is that the same
 deterministic DLP decision runs with the stdlib-only profile and with optional local model
 adapters, before any byte is allowed to reach a cloud service.
 """
@@ -67,7 +67,7 @@ def main() -> int:
     print(f"PASS portable core: {checked} domain modules import no cloud SDK")
     print("PASS graceful degradation: stdlib recognizers work without Presidio, OCR, or Gemma")
     print(
-        "LIMITS: Rsk6 is an on-prem-native pre-egress control, not a GCP serving workload. "
+        "LIMITS: onprem-dlp is an on-prem-native pre-egress control, not a GCP serving workload. "
         "This proof does not claim optional-model quality, OCR quality, database-driver "
         "availability, or Kubernetes production evidence."
     )

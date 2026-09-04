@@ -24,5 +24,5 @@ def test_markdown_has_no_em_dash_and_no_unvalidated_mermaid() -> None:
         if not any(part.startswith(".") for part in path.relative_to(ROOT).parts)
     ]
     assert not [path for path in docs if "—" in path.read_text(encoding="utf-8")]
-    # Rsk6 intentionally uses text/tables and ships no Mermaid diagram requiring a Node parser.
+    # onprem-dlp intentionally uses text/tables and ships no Mermaid diagram requiring a Node parser.
     assert not [path for path in docs if "```mermaid" in path.read_text(encoding="utf-8")]

@@ -2,7 +2,7 @@
 
 Documentation authority is declared in [`docs/doc-authority.md`](docs/doc-authority.md).
 
-**Rsk6** in the GRC GenAI catalog. An open-source (Apache-2.0) data-leak-prevention
+`onprem-dlp` in the GRC GenAI catalog. An open-source (Apache-2.0) data-leak-prevention
 tool that runs **entirely on-prem, CPU-only**, and scrubs data **before** it is sent to
 any cloud LLM or API. No byte reaches the cloud unless this gate says so.
 

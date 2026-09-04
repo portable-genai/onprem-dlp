@@ -118,7 +118,7 @@ egress**. It therefore does NOT consume the sibling platform services, by design
 by omission:
 
 - It is the on-prem, sovereign-DLP option that a cloud agent layers **behind** its runtime
-  guardrail. The cloud guardrail gateway (**Hrz1** `agent-guardrail-gateway`) is the
+  guardrail. The cloud guardrail gateway (`agent-guardrail-gateway`) is the
   in-cloud control; this gate runs inside the customer estate before anything reaches it.
 - Cloud document-diligence agents in the catalog (for example the CDD / Source-of-Wealth
   agent) reference this system as the sovereign-DLP option behind their redaction port. They

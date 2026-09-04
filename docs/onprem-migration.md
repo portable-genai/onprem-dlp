@@ -23,7 +23,7 @@ or workload identity and bounded, deterministically ordered `SELECT` queries.
 
 **Moving INTO the cloud (reverse exit):** if a workload later runs inside a
 sovereign/VPC-SC perimeter, the same container runs unchanged on GKE/Cloud Run; the
-optional BigQuery adapter sits behind the same `ColumnSampler` port, while Hrz1's
+optional BigQuery adapter sits behind the same `ColumnSampler` port, while `agent-guardrail-gateway`'s
 Cloud-DLP-based gateway becomes a second, cloud-side layer behind this one. The
 Google SDK is never part of the core or offline gate.
 

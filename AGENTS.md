@@ -7,14 +7,14 @@ here. Read it first. This file carries only what is specific to this one.
 
 ## What this is
 
-Catalog id **Rsk6**. Open-source, CPU-only, on-prem DLP gate that scrubs data BEFORE any
+Catalog id `onprem-dlp`. Open-source, CPU-only, on-prem DLP gate that scrubs data BEFORE any
 cloud egress.
 
 ## Concrete bindings
 
 | | |
 |---|---|
-| Catalog id | `Rsk6` |
+| Catalog id | `onprem-dlp` |
 | Package | `src/onprem_dlp/` |
 | Profile variable | `ONPREM_DLP_PROFILE` |
 | Adapter families | `db`, `gemma`, `local`, `ner`, `ocr` |

@@ -1,19 +1,19 @@
 # Common-base practices audit
 
 - **Repo:** `onprem-dlp`
-- **Catalog id:** Rsk6 (package `onprem_dlp`, env prefix `ONPREM_DLP`)
+- **Catalog id:** `onprem-dlp` (package `onprem_dlp`, env prefix `ONPREM_DLP`)
 - **Catalogue reference:** [`common-base-practices.md`](https://github.com/portable-genai/.github/blob/main/common-base-practices.md) (checks A1..G7)
 - **Authoritative source:** reconciled to the maintainer's cross-repository audit matrix,
   authoritative on portfolio status. This file owns current repository evidence and verdicts.
   Commons remain deliberately unadopted for the offline core.
-- **Note:** Rsk6 is a **stdlib, air-gapped, on-prem DLP egress gate** (detect / redact / block PII in
+- **Note:** `onprem-dlp` is a **stdlib, air-gapped, on-prem DLP egress gate** (detect / redact / block PII in
   text, images and database columns *before* any byte leaves for the cloud), **not** a GCP hexagonal
   cloud agent. It is hexagonal (ports-and-adapters, one-config profile swap) but its "profiles" vary a
   local model stack (regex-only -> +Gemma -> +Presidio), not a cloud backend. Cloud-specific checks are
   therefore **N-A by design** (marked with a one-line reason after reading the code), never FAILed. Its
   determinism (B1) and fail-closed egress policy (C5) are audited as first-class strengths.
 
-Applicability: Rsk6 ships **no web UI** and **no Terraform / cloud deploy**, so `[ui]` and the cloud
+Applicability: `onprem-dlp` ships **no web UI** and **no Terraform / cloud deploy**, so `[ui]` and the cloud
 `[infra]` checks are N-A. It has an optional machine-to-machine REST gate (`[api]` extra) and an
 optional local-CPU Gemma/Presidio pass, so `[agentic]` checks are audited on their merits.
 **Load-bearing** checks (a FAIL breaks a shared catalog guarantee) are A1-A6, C1-C5, D1-D3, E1; here
@@ -40,14 +40,14 @@ rather than by omission, and this is the same seam already recorded for `pii-kit
   though the code is local. The cost of the mirror is honest: a kit fix does not reach this
   repo automatically, so `netguard.py` names the kit as its reference and
   `tests/unit/test_netguard.py` pins the behaviour that must not drift.
-- `agent-eval-kit` is n/a: an air-gapped egress gate has no reachable Hrz4 promotion
+- `agent-eval-kit` is n/a: an air-gapped egress gate has no reachable `model-quality-gate` promotion
   authority, so a `--mode gate` would be a fake authority; `eval/run_eval.py` IS the
   offline gate by design; the repository CI runs it directly without claiming remote
   promotion authority.
 
 The copy relationship between this repo's recognizers and the public `pii-kit` remains
 pinned only by the package's validator tests and review (see the catalog's
-plan-commons-extraction "Rsk6 seam" section).
+plan-commons-extraction "`onprem-dlp` seam" section).
 
 | Check | Verdict | Evidence / gap |
 |---|---|---|
@@ -58,7 +58,7 @@ plan-commons-extraction "Rsk6 seam" section).
 | **A5** Lazy cloud imports in cloud adapters `[all]` **(load-bearing)** | PASS | `BigQuerySampler` imports `google.cloud.bigquery` only in `_connection`; MySQL/PostgreSQL and all model/OCR SDK imports are likewise method-local. Contract tests construct every adapter without any optional SDK installed, and the complete offline gate imports the package with no cloud dependency. |
 | **A6** Contract tests enforce the hexagon; port map cannot drift `[all]` **(load-bearing)** | PASS | `test_ports.py` asserts Protocol conformance, exact profile/binding key sets, construction through the one-settings convention, lazy optional imports, and deterministic equality across independent local containers. `scripts/portability_demo.py` runs the contract plus real CLI replay as an exit-code gate. |
 | **A7** Kernel vs vertical split in the domain `[all]` | PASS | The split is physical, not a label. `src/onprem_dlp/domain/kernel.py` holds the vertical-neutral machinery SPEC.md names (the `Finding`/`TextScanResult` evidence model, `RedactionStrategy`/`AppliedRedaction`/`RedactedText`, the OCR and pixel geometry, `ColumnProfile`/`ColumnClassification`/`DatasetClassification`, `EgressAction`/`EgressReason`/`EgressDecision`, `AdjudicationVerdict`, `AuditEvent`, `Severity`, the member-less open-taxonomy base `OpenLabel` and `utcnow`) and imports nothing from this package. `src/onprem_dlp/domain/models.py` keeps only the adopter-owned vertical (the `EntityType` jurisdiction label pack, `DIRECT_IDENTIFIERS`, `EgressPolicy`), imports `.kernel` and re-exports every kernel name as `X as X`, so no import site changed. Proved by execution, not by reading: `tests/unit/test_kernel_boundary.py` runs a fresh `subprocess` interpreter that imports `onprem_dlp.domain.kernel` and asserts `onprem_dlp.domain.models` never enters `sys.modules`, plus the reverse arrow, an AST scan for intra-package imports in `kernel.py`, `is`-identity of all 22 kernel names across both modules, and the absence of all 3 vertical names from the kernel. Verified RED first: against a re-export shim `kernel.py` over the pre-split `models.py` the same file failed 5 of 28 (the direction probe, the reverse arrow, the AST scan, `OpenLabel`, `utcnow`); after the split, 28 passed. Full gate green: 228 passed, 1 skipped, eval PASS, portability PASS, exit 0. |
-| **A8** Consume platform horizontals via thin delegates `[all]` | N-A | By design: an air-gapped on-prem leaf control with no platform to consume. It *is* a DLP/guardrail primitive (Rsk6); COMPLIANCE explicitly positions it to layer *behind* a cloud gateway (e.g. Hrz1), not to re-implement one. No cloud/platform delegate adapters. |
+| **A8** Consume platform horizontals via thin delegates `[all]` | N-A | By design: an air-gapped on-prem leaf control with no platform to consume. It *is* a DLP/guardrail primitive (`onprem-dlp`); COMPLIANCE explicitly positions it to layer *behind* a cloud gateway (e.g. `agent-guardrail-gateway`), not to re-implement one. No cloud/platform delegate adapters. |
 | **B1** Consequential math is deterministic, pure, replayable `[agentic]` | PASS | Standout strength. `recognizers.py` (regex + Luhn/NRIC/HKID/MyNumber/TFN/ABN/Medicare/IBAN/SSN checksums), `egress_policy_service.py`, `column_classifier_service.py`, `column_profile_service.py`: pure stdlib, no clock/randomness, unit-tested; `eval` scores precision/recall/accuracy = 1.0 offline. Models only advise. |
 | **B2** Every claim carries a citation; empty retrieval is a hard error `[agentic]` | PASS | Provenance analog fully met: every `Finding` carries `recognizer` (e.g. `regex:sg_nric`), span, `validated`, `context_boosted`; every `EgressReason` cites span + recognizer. No claim is emitted without a traceable source. The retrieval-grounding sub-clause is N-A (no RAG). |
 | **B3** Maker-checker on every consequential output `[agentic]` | PASS | BLOCK never auto-releases (`EgressDecision.escalates` -> human queue); ambiguous columns flip `needs_review=True`; Gemma verdicts are advisory and bounded (+/-0.15) and can never redact/block/release; asserted in `test_egress_policy.py`, `test_column_services.py`, `test_cli.py`. |
@@ -79,7 +79,7 @@ plan-commons-extraction "Rsk6 seam" section).
 | **D3** Whole gate runs offline, zero org secrets `[all]` **(load-bearing)** | PASS | `make gate` runs exact Ruff, the full pytest suite, English/Japanese golden evaluation, and column evaluation fully offline with zero secrets. the hosted GitHub Actions check runs that same command from the locked dev requirements on every push and pull request. |
 | **D4** Non-root, minimal, healthchecked container `[infra]` | PASS | `Dockerfile`: `USER dlp` (non-root), `HEALTHCHECK` against `/healthz`, `EXPOSE 8484`, `python:3.12-slim` base with only tesseract added; no build toolchain left in the image. (Single-stage rather than multi-stage, but nothing to strip.) Digest-pinning is tracked under D2. |
 | **D5** Deploy-time residency/sovereignty, parameterised `[infra]` | N-A | By design: on-prem / air-gapped tool with no cloud deploy. Residency is physical (runs inside the customer estate, zero runtime egress - COMPLIANCE "Data residency" row); there is no cloud region, Org Policy, CMEK, VPC-SC or Terraform to parameterise. |
-| **E1** Offline eval smoke guards merge; Hrz4 owns promotion `[agentic]` **(load-bearing)** | PASS | `eval/run_eval.py` deterministically gates English and Japanese precision/recall plus column accuracy with labelled thresholds and exit-code semantics; `make gate` wires it into CI. Hrz4 promotion is N-A by design for this standalone air-gapped tool, and the repo does not claim a fake remote promotion authority. |
+| **E1** Offline eval smoke guards merge; `model-quality-gate` owns promotion `[agentic]` **(load-bearing)** | PASS | `eval/run_eval.py` deterministically gates English and Japanese precision/recall plus column accuracy with labelled thresholds and exit-code semantics; `make gate` wires it into CI. `model-quality-gate` promotion is N-A by design for this standalone air-gapped tool, and the repo does not claim a fake remote promotion authority. |
 | **E2** Safety metric with strictest threshold, no false green `[agentic]` | PASS | The eval reports release-critical block-entity recall separately at the strictest threshold (`>=0.99`) across English and Japanese golden labels. It invokes the runtime `TextDetectionService`; the independent golden labels are the oracle. A planted empty detector drives the score to zero in `test_eval_gate.py`. |
 | **E3** Fixtures and golden data obviously fictional `[all]` | PASS | Demo/golden data is synthetic and checksum-valid: `@example.com`, `support@examplebank.sg`, obviously-synthetic names, generated by `scripts/generate_demo_data.py`; README/DEMO/CONTRIBUTING all state "no real personal data ... fake but checksum-valid". |
 | **F1** Demo is code, offline, one command, presenter-paced `[all]` | PASS | `make demo` drives the real CLI (scan / decide / redact / classify-columns) over synthetic fixtures, offline, no models or API key; `DEMO.md` is the presenter script. (Straight-line CLI rather than back/jump-paced - a reasonable simplification for a CLI tool with no UI.) |
@@ -89,9 +89,9 @@ plan-commons-extraction "Rsk6 seam" section).
 | **G2** Compliance mapping table + adopter-owned crosswalk `[all]` | PASS | `COMPLIANCE.md` retains its control/evidence mapping and adds an explicitly adopter-owned PDPA/MAS, HKPD/HKMA, APPI/FSA and Privacy Act/APRA crosswalk with responsibility for applicability, instrument versions, pack validation, approvals and retained evidence. |
 | **G3** Documented, mechanised fork path `[all]` | PASS | `docs/ADOPTING.md` (keep-vs-rewrite table, core-vs-adopter-owned file boundary, mechanical-rebrand + human-decisions split, adoption checklist) and `scripts/rename_fork.py` (stdlib-only, preview-first). The dry-run exits 0, prints a de-duplicated plan for `onprem_dlp` / `onprem-dlp` / `ONPREM_DLP_` (CLI, dist and resource stem coincide here), and writes nothing. |
 | **G4** Retired `[all]` | N-A (retired) | Retired practice. Releases are tracked by git tag and the `pyproject.toml` version. |
-| **G5** Role-specific FAQs referencing sibling systems `[all]` | PASS | `docs/faq/` ships a role index (`README.md`) plus five audience FAQs (security, portability, features, adoption, compliance) tailored to Rsk6's real posture (air-gapped, CPU-only, zero mandatory deps, ALLOW/REDACT/BLOCK policy, optional advisory adapters). Each names the owning catalog ids at the boundary (Hrz1 in-cloud guardrail, Hrz5 audit, the document verticals, Rsk4/Rsk5) and states that, being air-gapped, this gate consumes no sibling service at runtime. |
+| **G5** Role-specific FAQs referencing sibling systems `[all]` | PASS | `docs/faq/` ships a role index (`README.md`) plus five audience FAQs (security, portability, features, adoption, compliance) tailored to `onprem-dlp`'s real posture (air-gapped, CPU-only, zero mandatory deps, ALLOW/REDACT/BLOCK policy, optional advisory adapters). Each names the owning catalog ids at the boundary (`agent-guardrail-gateway` in-cloud guardrail, `agent-observability`, the document verticals, the data-residency validator/the exit-and-portability planner) and states that, being air-gapped, this gate consumes no sibling service at runtime. |
 | **G6** Contribution docs cover full extension touch list, enforced by test `[all]` | PASS | `CONTRIBUTING.md` enumerates adapter, port/sub-service and jurisdiction-pack touch lists across bindings, composition, surfaces, contracts, docs, eval and demo/portability evidence. `test_practices_closures.py` pins the key sections. |
-| **G7** Markdown discipline: minimise em-dashes, validate mermaid `[all]` | PASS | Tracked Markdown contains zero em-dash glyphs. Rsk6 intentionally uses text/tables and has no Mermaid block; the static practice test asserts both properties so unvalidated Mermaid cannot enter silently. |
+| **G7** Markdown discipline: minimise em-dashes, validate mermaid `[all]` | PASS | Tracked Markdown contains zero em-dash glyphs. `onprem-dlp` intentionally uses text/tables and has no Mermaid block; the static practice test asserts both properties so unvalidated Mermaid cannot enter silently. |
 
 **Verdict counts:** 33 PASS, 1 PARTIAL, 0 FAIL, 7 N-A (of 41 checks). Of the load-bearing set
 (A1-A6, C1-C5, D1-D3, E1): 12 PASS, 1 PARTIAL, 0 FAIL, 2 N-A-by-design (C1, C2).
@@ -109,7 +109,7 @@ egress policy (C5) are strong PASSes, as expected for this system.
 
 ## Gaps carried to systems/
 
-The material gaps to record on the Rsk6 row of
+The material gaps to record on the `onprem-dlp` row of
 the maintainer's per-system register
 `Capability gaps`:
 

@@ -162,7 +162,7 @@ years), not only its shape.
 **Suspected leak (finding missed):** capture the payload hash from the caller's logs,
 reproduce with `onprem-dlp scan-text --json`, add the miss to
 `eval/golden/text_golden.jsonl` as a failing case, fix (recognizer/context/threshold),
-re-run `make gate`, then follow Rgc10 breach-assessment for the disclosure itself.
+re-run `make gate`, then follow `breach-reportability-assessor` breach-assessment for the disclosure itself.
 
 **False-positive storm (business blocked):** identify the recognizer via the
 `recognizer` provenance on the findings; raise its floor via `policy.min_confidence`
