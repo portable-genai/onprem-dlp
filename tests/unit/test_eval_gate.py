@@ -79,11 +79,10 @@ def test_block_entity_safety_is_strictest_and_can_go_red(monkeypatch):
 
     from eval import run_eval
 
-    class EmptyDetector:
-        def scan(self, text):
-            return type("Result", (), {"findings": ()})()
+    def finds_nothing(text):
+        return type("Result", (), {"findings": ()})()
 
-    planted_recall, _ = run_eval.eval_block_entity_recall(EmptyDetector(), run_eval.BLOCK_ENTITIES)
+    planted_recall, _ = run_eval.eval_block_entity_recall(finds_nothing, run_eval.BLOCK_ENTITIES)
     assert planted_recall == 0.0
 
 
@@ -124,3 +123,70 @@ policy:
         expected={"identifier": "NON_PII"},
     )
     assert accuracy == 1.0, failures
+
+
+# --------------------------------------------------------------------------- #
+# Every detection path is scored, and what is not scored says so
+# --------------------------------------------------------------------------- #
+def test_a_non_regex_false_positive_now_lowers_precision() -> None:
+    """The filter's removal, proved by the case it used to hide.
+
+    ``evaluated_entities`` was built from ``detector.recognizers``, so a finding whose entity
+    type no regex recognizer declares was dropped from the PREDICTED set before precision was
+    computed. A model path could invent any number of them and the gate stayed at 1.000. The
+    same filter dropped such labels from the EXPECTED set, so recall could not fall either.
+
+    ``PERSON_NAME`` is the shape: it is a real entity type in the redact list, and no regex
+    recognizer produces it, so it is precisely what the old scorer could not see.
+    """
+    from eval import run_eval
+
+    from onprem_dlp.domain.kernel import Finding
+    from onprem_dlp.domain.models import EntityType
+
+    golden = run_eval.REPO / "eval" / "golden" / "text_golden.jsonl"
+    orchestrator, _ = run_eval.configured_eval_runtime()
+
+    def hallucinating(text: str):
+        scan = orchestrator.scan_text(text)
+        invented = Finding(
+            entity_type=EntityType.PERSON_NAME,
+            start=0,
+            end=12,
+            text="Nobody Atall",
+            confidence=0.99,
+            recognizer="ner:a-model-that-invented-it",
+        )
+        return type("Result", (), {"findings": (*scan.findings, invented)})()
+
+    clean_precision, _, _ = run_eval.eval_text_path(golden, orchestrator.scan_text)
+    noisy_precision, _, _ = run_eval.eval_text_path(golden, hallucinating)
+
+    assert clean_precision == 1.0
+    assert noisy_precision < clean_precision, (
+        "a finding from outside the regex stack did not lower precision, which means the "
+        "predicted set is still being filtered and non-regex paths are unmeasurable"
+    )
+
+
+def test_path_coverage_names_every_path_and_marks_the_unmeasured_ones() -> None:
+    """An unmeasured path must be visible as unmeasured, not absent.
+
+    The defect this replaces was not a wrong number, it was a missing row: four detection paths
+    were filtered out of the measurement while the README said they raise recall. A reader saw
+    ``EVAL PASS`` and had no way to learn which paths that verdict covered.
+    """
+    from eval import run_eval
+
+    orchestrator, _ = run_eval.configured_eval_runtime()
+    rows = run_eval.path_coverage(orchestrator)
+
+    assert [name for name, _, _ in rows] == [name for name, _, _ in run_eval.DETECTION_PATHS]
+    statuses = {name: status for name, _, status in rows}
+    assert statuses["regex recognizers"].startswith("MEASURED")
+    # OCR has no labelled corpus on any profile, so it is UNMEASURED and never silently absent.
+    assert statuses["OCR + image redactor"].startswith("UNMEASURED")
+    # Every row resolves to one of the three states; a blank status would be the old defect
+    # wearing a table.
+    for _, _, status in rows:
+        assert status.startswith(("MEASURED", "UNMEASURED", "inactive")), status

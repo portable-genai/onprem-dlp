@@ -17,9 +17,15 @@ The detection heart is **pure stdlib**: regex candidates hardened by real checks
 validators (SG NRIC/FIN, HK HKID, JP MyNumber, AU TFN/ABN/Medicare, credit-card Luhn,
 IBAN mod-97) with context-word confidence boosting. A small **Google Gemma** model
 (via [Ollama](https://ollama.com) or llama.cpp, ~815 MB quantised, CPU-friendly) and
-**Microsoft Presidio** NER are *optional adapters* that raise recall for names and
-addresses. They contribute candidates and advisory verdicts, but the deterministic
-policy engine always makes the decision.
+**Microsoft Presidio** NER are *optional adapters* intended to raise recall for names
+and addresses. They contribute candidates and advisory verdicts, but the deterministic
+policy engine always makes the decision. That recall claim is **not yet measured**: the
+golden sets label the spans the deterministic recognizers find, and no case carries a
+labelled person or address span, an adjudication verdict, or a labelled pixel box. The
+eval says so in its own output rather than leaving it to be inferred, printing a
+detection-path table that marks each path MEASURED, inactive on this profile, or
+UNMEASURED. Findings from a bound optional adapter now count for and against precision
+exactly as deterministic ones do; they used to be filtered out of the scoring entirely.
 
 ## Install
 
