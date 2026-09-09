@@ -35,6 +35,13 @@ dev = [
   "pytest-cov>=5.0",
   "ruff==0.16.5",
   "pyyaml>=6.0",
+  # The shared evaluation scaffold, in the DEV extra and deliberately not in `dependencies`.
+  # The zero-mandatory-dependency claim above is about the product: the domain core, the local
+  # profile, the CLI and the samplers install and run on an air-gapped host with nothing but
+  # Python. The eval is not the product, and this is what puts this repository's gate on the
+  # same contract as the rest of the fleet: the same EvalReport, the same fail-closed `passed`
+  # rule, the same rubric loading and the same denominator rule.
+  "agent-eval-kit @ git+https://github.com/portable-genai/agent-eval-kit@v0.0.3",
 ]
 all = [
   "onprem-dlp[yaml,api,ner,ocr,postgres,mysql,bigquery]",

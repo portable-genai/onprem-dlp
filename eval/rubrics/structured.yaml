@@ -1,0 +1,19 @@
+# Scored by: eval/run_eval.py::eval_columns against eval/golden/columns_expected.json, which
+# names the category a reviewer assigned to each column of the sample dataset.
+metric: structured_column_accuracy
+description: >
+  Share of sampled columns the classifier assigns the category a reviewer assigned.
+threshold: 0.85
+applies_to:
+  - DlpOrchestrator.classify_columns
+criteria:
+  - id: matches_the_reviewer
+    description: The computed category equals the reviewer's.
+    weight: 1.0
+denominator:
+  kind: rate
+  over: labelled columns in the sample dataset
+direction: maximize
+scoring:
+  scale: [0.0, 1.0]
+  pass_if: "score >= threshold"

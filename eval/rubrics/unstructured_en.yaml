@@ -1,0 +1,33 @@
+# Scored by: eval/run_eval.py::eval_text over eval/golden/text_golden.jsonl, span by span, with
+# true TP/FP/FN counting against labels a reviewer wrote by reading each passage.
+#
+# This is the only real precision/recall corpus in the fleet, and the bars are set where a
+# pre-egress control belongs: precision high, because a control that blocks legitimate traffic is
+# a control somebody switches off, and recall a step below it, because the deterministic stack is
+# the floor and the optional model paths are supposed to raise it.
+metric: unstructured_en_precision
+description: >
+  Of the spans the detector reports on English text, the share a reviewer also labelled.
+threshold: 0.90
+applies_to:
+  - DlpOrchestrator.scan_text
+criteria:
+  - id: reported_is_labelled
+    description: Each reported span matches a labelled span in type and text.
+    weight: 1.0
+companion_metrics:
+  unstructured_en_recall:
+    threshold: 0.85
+    description: >
+      Of the spans a reviewer labelled in English text, the share the detector reports.
+denominator:
+  unstructured_en_precision:
+    kind: rate
+    over: spans the detector reports on the English corpus
+  unstructured_en_recall:
+    kind: rate
+    over: spans a reviewer labelled in the English corpus
+direction: maximize
+scoring:
+  scale: [0.0, 1.0]
+  pass_if: "score >= threshold"

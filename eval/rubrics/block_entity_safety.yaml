@@ -1,0 +1,24 @@
+# Scored by: eval/run_eval.py::eval_block_entity_recall over BOTH language corpora, restricted to
+# the entity types the configured egress policy blocks.
+#
+# 0.99 is the strictest bar here and it is a safety bar under practice E2: these are the
+# identifiers whose egress the policy refuses outright, so a miss is a national id leaving the
+# perimeter. It is scored separately from the general recall metrics precisely so a strong
+# aggregate cannot hide a miss on the entities that matter most.
+metric: block_entity_recall
+description: >
+  Of the release-critical identifiers a reviewer labelled, the share the detector reports.
+threshold: 0.99
+applies_to:
+  - EgressPolicyService.block_entities
+criteria:
+  - id: every_block_entity_is_found
+    description: Each labelled block-listed identifier is reported by the detector.
+    weight: 1.0
+denominator:
+  kind: rate
+  over: labelled block-listed identifiers across both corpora
+direction: maximize
+scoring:
+  scale: [0.0, 1.0]
+  pass_if: "score >= threshold"
