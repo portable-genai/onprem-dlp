@@ -40,6 +40,13 @@ from collections.abc import Callable
 REPO = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
 
+from agent_eval_kit import (  # noqa: E402
+    EvalMetricResult,
+    EvalReport,
+    load_rubrics,
+    print_report,
+)
+
 from onprem_dlp.adapters.local import CsvSampler  # noqa: E402
 from onprem_dlp.config import Container, load_settings  # noqa: E402
 from onprem_dlp.domain.detection_service import TextDetectionService  # noqa: E402
@@ -53,7 +60,29 @@ from onprem_dlp.ports import ColumnSampler  # noqa: E402
 #: by the signature. It used to be the second, permanently.
 Scanner = Callable[[str], "TextScanResult"]
 
-P_MIN, R_MIN, ACC_MIN, BLOCK_RECALL_MIN = 0.90, 0.85, 0.85, 0.99
+#: Where every bar lives. Not four module constants: a threshold written as a Python literal
+#: carries no argument, so a reader can see that precision must clear 0.90 and cannot read why
+#: precision is set above recall, or why the block-entity bar is a step above both. The rubric
+#: files carry the reasoning beside each number and `agent_eval_kit.load_rubrics` reads them.
+RUBRICS = REPO / "eval" / "rubrics"
+THRESHOLDS: dict[str, float] = load_rubrics(RUBRICS).thresholds()
+
+#: The metrics this runner scores, in report order. Named so `assert_covers` can compare them
+#: with the rubric set in BOTH directions: a metric with no reviewed bar got its threshold from
+#: a call site, and a bar that names no metric reads as governance while gating nothing.
+SCORED: tuple[str, ...] = (
+    "unstructured_en_precision",
+    "unstructured_en_recall",
+    "unstructured_ja_precision",
+    "unstructured_ja_recall",
+    "structured_column_accuracy",
+    "block_entity_recall",
+)
+
+P_MIN = THRESHOLDS["unstructured_en_precision"]
+R_MIN = THRESHOLDS["unstructured_en_recall"]
+ACC_MIN = THRESHOLDS["structured_column_accuracy"]
+BLOCK_RECALL_MIN = THRESHOLDS["block_entity_recall"]
 BLOCK_ENTITIES = frozenset(
     {
         "AU_MEDICARE",
@@ -261,7 +290,23 @@ def eval_columns(
     return accuracy, failures
 
 
+def _corpus_size() -> int:
+    """Labelled cases across both text corpora plus the labelled columns.
+
+    Carried into the report because `EvalReport.passed` requires it to be non-zero: a report
+    over no examples is the vacuous pass this fleet already paid for once, and a count that is
+    hardcoded rather than measured is the same defect wearing a number.
+    """
+    total = 0
+    for path in sorted((REPO / "eval" / "golden").glob("text*_golden.jsonl")):
+        total += sum(1 for line in path.read_text(encoding="utf-8").splitlines() if line.strip())
+    expected = json.loads((REPO / "eval" / "golden" / "columns_expected.json").read_text())
+    return total + len(expected)
+
+
 def main() -> int:
+    # The rubrics and the scored set must agree in BOTH directions before anything is scored.
+    load_rubrics(RUBRICS).assert_covers(SCORED)
     orchestrator, block_entities = configured_eval_runtime()
     # The COMPOSED path, which is what the product runs. Scoring `orchestrator.detection.scan`
     # measured the regex stack and called the result a measurement of the service.
@@ -291,16 +336,41 @@ def main() -> int:
     for name, binding, status in path_coverage(orchestrator):
         print(f"  {name.ljust(width)}  {binding:<24} {status}")
 
-    ok = (
-        precision >= P_MIN
-        and recall >= R_MIN
-        and ja_precision >= P_MIN
-        and ja_recall >= R_MIN
-        and accuracy >= ACC_MIN
-        and block_recall >= BLOCK_RECALL_MIN
+    # The same EvalReport the rest of the fleet speaks, so this gate is on one contract with
+    # them: the same fail-closed `passed` rule (`all(())` cannot certify anything, because the
+    # report also requires a non-empty results tuple and a non-zero example count), and the same
+    # rendering. The prose above stays, because it says which corpus each number came from and
+    # which detection paths the numbers do not cover, and a table cannot say that.
+    report = EvalReport(
+        dataset=f"{REPO / 'eval' / 'golden'} (en + ja + columns)",
+        results=(
+            EvalMetricResult.scored(
+                "unstructured_en_precision", precision, THRESHOLDS["unstructured_en_precision"]
+            ),
+            EvalMetricResult.scored(
+                "unstructured_en_recall", recall, THRESHOLDS["unstructured_en_recall"]
+            ),
+            EvalMetricResult.scored(
+                "unstructured_ja_precision",
+                ja_precision,
+                THRESHOLDS["unstructured_ja_precision"],
+            ),
+            EvalMetricResult.scored(
+                "unstructured_ja_recall", ja_recall, THRESHOLDS["unstructured_ja_recall"]
+            ),
+            EvalMetricResult.scored(
+                "structured_column_accuracy", accuracy, THRESHOLDS["structured_column_accuracy"]
+            ),
+            EvalMetricResult.scored(
+                "block_entity_recall", block_recall, THRESHOLDS["block_entity_recall"]
+            ),
+        ),
+        n_examples=_corpus_size(),
+        evaluator="offline deterministic corpus (air-gapped; no cloud creds)",
     )
-    print("EVAL", "PASS" if ok else "FAIL")
-    return 0 if ok else 1
+    print()
+    print_report(report, "offline precision/recall corpus")
+    return 0 if report.passed else 1
 
 
 if __name__ == "__main__":

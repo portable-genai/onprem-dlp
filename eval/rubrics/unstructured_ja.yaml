@@ -1,0 +1,32 @@
+# Scored by: eval/run_eval.py::eval_text over eval/golden/text_ja_golden.jsonl.
+#
+# A separate corpus and separate metrics rather than one pooled number, because pooling would let
+# a strong English result carry a weak Japanese one. The two scripts fail differently: a
+# tokenisation assumption that holds for Latin text does not hold for Japanese, and a pooled
+# metric is exactly where that goes unnoticed.
+metric: unstructured_ja_precision
+description: >
+  Of the spans the detector reports on Japanese text, the share a reviewer also labelled.
+threshold: 0.90
+applies_to:
+  - DlpOrchestrator.scan_text
+criteria:
+  - id: reported_is_labelled
+    description: Each reported span matches a labelled span in type and text.
+    weight: 1.0
+companion_metrics:
+  unstructured_ja_recall:
+    threshold: 0.85
+    description: >
+      Of the spans a reviewer labelled in Japanese text, the share the detector reports.
+denominator:
+  unstructured_ja_precision:
+    kind: rate
+    over: spans the detector reports on the Japanese corpus
+  unstructured_ja_recall:
+    kind: rate
+    over: spans a reviewer labelled in the Japanese corpus
+direction: maximize
+scoring:
+  scale: [0.0, 1.0]
+  pass_if: "score >= threshold"
