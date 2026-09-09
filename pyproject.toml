@@ -41,6 +41,12 @@ dev = [
   # Python. The eval is not the product, and this is what puts this repository's gate on the
   # same contract as the rest of the fleet: the same EvalReport, the same fail-closed `passed`
   # rule, the same rubric loading and the same denominator rule.
+  #
+  # It brings httpx (and anyio, httpcore, h11, certifi) into the DEV lock, for a gate client
+  # this repository never calls: it declares no promotion bundle, because nothing here is
+  # promoted through `model-quality-gate`. Stated rather than discovered. Importing
+  # `agent_eval_kit` does not import httpx, which the kit proves in its own core-purity test,
+  # so the cost is install weight in a developer venv and not a dependency in the scan path.
   "agent-eval-kit @ git+https://github.com/portable-genai/agent-eval-kit@v0.0.3",
 ]
 all = [
@@ -52,6 +58,12 @@ onprem-dlp = "onprem_dlp.cli.main:main"
 # Guarded REST entry point: resolves the bind through onprem_dlp.netguard rather than
 # taking a --host from a container argument no guard can see.
 onprem-dlp-serve = "onprem_dlp.api.serve:main"
+
+# Required for the agent-eval-kit git+https pin in the dev extra (a direct reference).
+# hatchling refuses one by default, and `make setup` fails at metadata time without this,
+# which is a broken first command for a contributor and says nothing about why.
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/onprem_dlp"]
