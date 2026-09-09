@@ -8,7 +8,25 @@ Gates (tuned to the deterministic stack; model profiles should only raise recall
   structured             column-category accuracy >= 0.85
   block-entity safety    recall >= 0.99 (strictest threshold)
 
-Exit code 0 = pass, 1 = fail — wire it into CI next to pytest.
+Every metric here is scored through ``DlpOrchestrator.scan_text``, the SAME entry point the
+product runs, and over the golden set's WHOLE label set.
+
+It used to be scored through ``TextDetectionService.scan`` with an ``evaluated_entities`` filter
+built from ``detector.recognizers``, which quietly restricted both the expected labels and the
+predicted findings to the entity types the regex stack declares. That filter took the Presidio
+NER analyzer, the Tesseract OCR path, the image redactor and the Gemma adjudicator out of the
+measurement on both sides at once, so a false positive from a model path could not lower
+precision and a label only a model path can produce could not lower recall. The README
+meanwhile said those paths RAISE recall. A claim about a path is not evidence while the path is
+filtered out of the measurement of it.
+
+So the filter is gone, and what remains unmeasured is now PRINTED as unmeasured rather than
+silently excluded. :func:`path_coverage` reports every detection path, what this profile binds
+it to, and whether the corpus exercises it. A path bound to a null adapter contributes nothing
+and is reported as such; a path bound to a real adapter with no labelled corpus behind it is
+reported UNMEASURED, which is the honest state and the thing a reader has to be able to see.
+
+Exit code 0 = pass, 1 = fail. Wire it into CI next to pytest.
 """
 
 from __future__ import annotations
@@ -17,6 +35,7 @@ import json
 import pathlib
 import sys
 from collections import Counter
+from collections.abc import Callable
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
@@ -24,8 +43,15 @@ sys.path.insert(0, str(REPO / "src"))
 from onprem_dlp.adapters.local import CsvSampler  # noqa: E402
 from onprem_dlp.config import Container, load_settings  # noqa: E402
 from onprem_dlp.domain.detection_service import TextDetectionService  # noqa: E402
+from onprem_dlp.domain.models import TextScanResult  # noqa: E402
 from onprem_dlp.domain.orchestrator_service import DlpOrchestrator  # noqa: E402
 from onprem_dlp.ports import ColumnSampler  # noqa: E402
+
+#: What a scorer is handed: the product's own text-scan entry point. Typed as a callable so the
+#: eval can be pointed at `DlpOrchestrator.scan_text` (the composed path, what the product runs)
+#: or at `TextDetectionService.scan` (the regex stack alone) without either one being privileged
+#: by the signature. It used to be the second, permanently.
+Scanner = Callable[[str], "TextScanResult"]
 
 P_MIN, R_MIN, ACC_MIN, BLOCK_RECALL_MIN = 0.90, 0.85, 0.85, 0.99
 BLOCK_ENTITIES = frozenset(
@@ -44,20 +70,24 @@ BLOCK_ENTITIES = frozenset(
 
 def eval_text_path(
     path: pathlib.Path,
-    detector: TextDetectionService | None = None,
-    evaluated_entities: frozenset[str] | None = None,
+    scanner: Scanner | None = None,
 ) -> tuple[float, float, list[str]]:
-    detector = detector or TextDetectionService()
+    """Precision and recall over EVERY label in the golden set, scored by ``scanner``.
+
+    ``scanner`` is the callable the product runs (``DlpOrchestrator.scan_text``), not the regex
+    service underneath it, so a finding contributed by a bound NER analyzer counts as a true or
+    a false positive exactly as a regex finding does. There is deliberately no entity filter:
+    filtering the predicted set hid false positives from every non-regex path, and filtering the
+    expected set hid the labels only those paths can find.
+    """
+    scan = scanner or TextDetectionService().scan
     tp = fp = fn = 0
     failures: list[str] = []
     cases = [
         json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
     ]
 
-    def in_scope(item: dict) -> bool:
-        return evaluated_entities is None or item["type"] in evaluated_entities
-
-    positive_cases = sum(any(in_scope(item) for item in case.get("expected", ())) for case in cases)
+    positive_cases = sum(bool(case.get("expected")) for case in cases)
     negative_cases = len(cases) - positive_cases
     if not cases:
         return 0.0, 0.0, [f"  DATASET {path.name}: golden set is empty"]
@@ -67,13 +97,9 @@ def eval_text_path(
         failures.append(f"  DATASET {path.name}: golden set has no negative case")
 
     for case in cases:
-        expected = Counter(
-            (item["type"], item["text"]) for item in case["expected"] if in_scope(item)
-        )
+        expected = Counter((item["type"], item["text"]) for item in case["expected"])
         predicted = Counter(
-            (finding.entity_type.value, finding.text)
-            for finding in detector.scan(case["text"]).findings
-            if evaluated_entities is None or finding.entity_type.value in evaluated_entities
+            (finding.entity_type.value, finding.text) for finding in scan(case["text"]).findings
         )
         tp += sum((expected & predicted).values())
         fp += sum((predicted - expected).values())
@@ -94,24 +120,19 @@ def eval_text_path(
 
 def eval_text(
     golden_file: str = "text_golden.jsonl",
-    detector: TextDetectionService | None = None,
-    evaluated_entities: frozenset[str] | None = None,
+    scanner: Scanner | None = None,
 ) -> tuple[float, float, list[str]]:
-    return eval_text_path(
-        REPO / "eval" / "golden" / golden_file,
-        detector,
-        evaluated_entities,
-    )
+    return eval_text_path(REPO / "eval" / "golden" / golden_file, scanner)
 
 
 def eval_block_entity_recall(
-    detector: TextDetectionService | None = None,
+    scanner: Scanner | None = None,
     block_entities: frozenset[str] | None = None,
 ) -> tuple[float, list[str]]:
     """Measure release-critical identifiers with the golden labels as the independent oracle."""
-    if detector is None or block_entities is None:
-        configured_detector, configured_blocks = configured_eval_policy()
-        detector = detector or configured_detector
+    if scanner is None or block_entities is None:
+        orchestrator, configured_blocks = configured_eval_runtime()
+        scanner = scanner or orchestrator.scan_text
         block_entities = block_entities or configured_blocks
     expected_total = detected_total = 0
     failures: list[str] = []
@@ -127,7 +148,7 @@ def eval_block_entity_recall(
             )
             predicted = Counter(
                 (finding.entity_type.value, finding.text)
-                for finding in detector.scan(case["text"]).findings
+                for finding in scanner(case["text"]).findings
                 if finding.entity_type.value in block_entities
             )
             expected_total += sum(expected.values())
@@ -157,6 +178,67 @@ def configured_eval_policy() -> tuple[TextDetectionService, frozenset[str]]:
     return orchestrator.detection, block_entities
 
 
+#: Every detection path this service composes, with the label kind each one contributes and
+#: the corpus that would have to exist to measure it. The point of the table is that a path
+#: with nothing behind it says so, out loud, in the gate's own output: the previous runner
+#: filtered these four out of both the expected and the predicted set, which made a path with
+#: no measurement indistinguishable from a path that passed.
+DETECTION_PATHS: tuple[tuple[str, str, str], ...] = (
+    (
+        "regex recognizers",
+        "detection",
+        "eval/golden/text*_golden.jsonl, labelled per span",
+    ),
+    (
+        "NER analyzer",
+        "ner",
+        "no labelled corpus: person and address spans are not labelled in the golden set",
+    ),
+    (
+        "LLM adjudicator",
+        "adjudicator",
+        "no labelled corpus: no case carries a hand-written adjudication verdict",
+    ),
+    (
+        "OCR + image redactor",
+        "ocr",
+        "no labelled corpus: no image fixture carries labelled pixel boxes",
+    ),
+)
+
+
+def path_coverage(orchestrator: DlpOrchestrator) -> list[tuple[str, str, str]]:
+    """One ``(path, binding, status)`` row per detection path, measured or not.
+
+    ``status`` is one of:
+
+    * ``MEASURED``   the golden set labels what this path contributes and the numbers above
+      include it, false positives included;
+    * ``inactive``   this profile binds a null adapter, so the path contributes nothing here
+      and there is nothing to measure. Not a gap, a configuration;
+    * ``UNMEASURED`` the path is bound to a real adapter and no labelled corpus scores it. This
+      is the honest state, and it is printed rather than filtered away, because the README's
+      claim that these paths raise recall is exactly the claim nothing here can support yet.
+    """
+    rows: list[tuple[str, str, str]] = []
+    for name, attribute, corpus in DETECTION_PATHS:
+        if attribute == "detection":
+            rows.append((name, type(orchestrator.detection).__name__, f"MEASURED ({corpus})"))
+            continue
+        if attribute == "ocr":
+            # OCR is not held on the orchestrator: `scan_image` takes the engine per call, so
+            # what a profile configures is only reachable through the container.
+            rows.append((name, "per-call OcrEngine", f"UNMEASURED ({corpus})"))
+            continue
+        bound = getattr(orchestrator, attribute, None)
+        binding = type(bound).__name__ if bound is not None else "unbound"
+        if bound is None or binding.startswith("Null"):
+            rows.append((name, binding, "inactive on this profile: contributes nothing"))
+        else:
+            rows.append((name, binding, f"UNMEASURED ({corpus})"))
+    return rows
+
+
 def eval_columns(
     orchestrator: DlpOrchestrator | None = None,
     sampler: ColumnSampler | None = None,
@@ -181,21 +263,13 @@ def eval_columns(
 
 def main() -> int:
     orchestrator, block_entities = configured_eval_runtime()
-    detector = orchestrator.detection
-    evaluated_entities = frozenset(
-        recognizer.entity_type.value for recognizer in detector.recognizers
-    )
-    precision, recall, text_failures = eval_text(
-        detector=detector,
-        evaluated_entities=evaluated_entities,
-    )
-    ja_precision, ja_recall, ja_failures = eval_text(
-        "text_ja_golden.jsonl",
-        detector,
-        evaluated_entities,
-    )
+    # The COMPOSED path, which is what the product runs. Scoring `orchestrator.detection.scan`
+    # measured the regex stack and called the result a measurement of the service.
+    scanner = orchestrator.scan_text
+    precision, recall, text_failures = eval_text(scanner=scanner)
+    ja_precision, ja_recall, ja_failures = eval_text("text_ja_golden.jsonl", scanner)
     accuracy, column_failures = eval_columns(orchestrator)
-    block_recall, block_failures = eval_block_entity_recall(detector, block_entities)
+    block_recall, block_failures = eval_block_entity_recall(scanner, block_entities)
 
     print(
         f"unstructured/en: precision={precision:.3f} (gate {P_MIN}) "
@@ -211,6 +285,11 @@ def main() -> int:
     print(*column_failures, sep="\n") if column_failures else None
     print(f"safety/block: recall={block_recall:.3f} (gate {BLOCK_RECALL_MIN})")
     print(*block_failures, sep="\n") if block_failures else None
+
+    print("\ndetection paths (what the numbers above do and do not cover):")
+    width = max(len(name) for name, _, _ in DETECTION_PATHS)
+    for name, binding, status in path_coverage(orchestrator):
+        print(f"  {name.ljust(width)}  {binding:<24} {status}")
 
     ok = (
         precision >= P_MIN
